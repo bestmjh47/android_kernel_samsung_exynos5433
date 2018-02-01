@@ -598,7 +598,7 @@ int wacom_i2c_flash_w9012(struct wacom_i2c *wac_i2c, unsigned char *fw_data)
 {
 	bool bRet = false;
 	int result, i;
-	int eraseBlock[200], eraseBlockNum;
+	int eraseBlock[160], eraseBlockNum;
 	int iBLVer, iMpuType;
 	unsigned long max_address = 0;	/* Max.address of Load data */
 	unsigned long start_address = 0x2000;	/* Start.address of Load data */
