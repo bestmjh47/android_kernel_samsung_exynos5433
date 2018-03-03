@@ -357,6 +357,8 @@ static inline unsigned int r2h_bits(int cmd)
 #define S5P_FIMV_E_VBV_BUFFER_SIZE		0xF84C
 #define S5P_FIMV_E_VBV_INIT_DELAY		0xF850
 #define S5P_FIMV_E_NUM_DPB			0xF890
+#define S5P_FIMV_E_MIN_SCRATCH_BUFFER_SIZE	0xF894
+
 #define S5P_FIMV_E_LUMA_DPB			0xF8C0
 #define S5P_FIMV_E_CHROMA_DPB			0xF904
 #define S5P_FIMV_E_ME_BUFFER			0xF948
