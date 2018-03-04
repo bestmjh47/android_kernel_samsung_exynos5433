@@ -1026,10 +1026,6 @@ static inline unsigned int mfc_version(struct s5p_mfc_dev *dev)
 					(dev->fw.date >= 0x160428)) ||		\
 					(IS_MFCv7X(dev) &&			\
 					(dev->fw.date >= 0x160519)))
-#define FW_HAS_E_MIN_SCRATCH_BUF(dev)	((IS_MFCv8X(dev) &&			\
-					(dev->fw.date >= 0x140516)) ||		\
-					(IS_MFCv7X(dev) &&			\
-					(dev->fw.date >= 0x170705)))
 
 #define HW_LOCK_CLEAR_MASK		(0xFFFFFFFF)
 

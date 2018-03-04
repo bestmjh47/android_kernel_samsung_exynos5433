@@ -256,10 +256,7 @@ int s5p_mfc_alloc_codec_buffers(struct s5p_mfc_ctx *ctx)
 		ctx->port_a_size += add_size1;
 		break;
 	case S5P_FIMV_CODEC_H264_ENC:
-		if (FW_HAS_E_MIN_SCRATCH_BUF(dev))
-			mfc_debug(2, "Use min scratch buffer size, %d\n",
-					ctx->scratch_buf_size);
-		else if (mfc_version(dev) == 0x61)
+		if (mfc_version(dev) == 0x61)
 			ctx->scratch_buf_size =
 				ENC_V61_H264_SCRATCH_SIZE(mb_width, mb_height);
 		else if (IS_MFCv8X(dev))
@@ -277,10 +274,7 @@ int s5p_mfc_alloc_codec_buffers(struct s5p_mfc_ctx *ctx)
 		break;
 	case S5P_FIMV_CODEC_MPEG4_ENC:
 	case S5P_FIMV_CODEC_H263_ENC:
-		if (FW_HAS_E_MIN_SCRATCH_BUF(dev))
-			mfc_debug(2, "Use min scratch buffer size, %d\n",
-					ctx->scratch_buf_size);
-		else if (mfc_version(dev) == 0x61)
+		if (mfc_version(dev) == 0x61)
 			ctx->scratch_buf_size =
 				ENC_V61_MPEG4_SCRATCH_SIZE(mb_width, mb_height);
 		else
@@ -294,10 +288,7 @@ int s5p_mfc_alloc_codec_buffers(struct s5p_mfc_ctx *ctx)
 		ctx->port_b_size = 0;
 		break;
 	case S5P_FIMV_CODEC_VP8_ENC:
-		if (FW_HAS_E_MIN_SCRATCH_BUF(dev))
-			mfc_debug(2, "Use min scratch buffer size, %d\n",
-					ctx->scratch_buf_size);
-		else if (IS_MFCv8X(dev))
+		if (IS_MFCv8X(dev))
 			ctx->scratch_buf_size =
 				ENC_V80_VP8_SCRATCH_SIZE(mb_width, mb_height);
 		else
