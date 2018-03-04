@@ -172,3 +172,6 @@ obj-$(CONFIG_MOBICORE_DRIVER)   += gud/
 obj-$(CONFIG_SENSORS_FINGERPRINT)	+= fingerprint/
 obj-$(CONFIG_SENSORS_SSP)		+= sensorhub/
 obj-$(CONFIG_SENSORS_CORE)	+= sensors/
+
+# Android non-staging drivers
+obj-$(CONFIG_ANDROID)	+= android/
