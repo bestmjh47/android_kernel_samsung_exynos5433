@@ -32,7 +32,9 @@ static enum power_supply_property max77843_fuelgauge_props[] = {
 #if defined(CONFIG_EN_OOPS)
 	POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN,
 #endif
+#ifndef EXTENDED_BATTERY_SUPPORT
 	POWER_SUPPLY_PROP_ENERGY_FULL,
+#endif
 };
 
 #if !defined(CONFIG_SEC_FACTORY)
@@ -324,7 +326,11 @@ static int fg_read_soc(struct max77843_fuelgauge_data *fuelgauge)
 		return -1;
 	}
 
+#ifdef EXTENDED_BATTERY_SUPPORT
+	soc = fg_read_vfsoc(fuelgauge);
+#else
 	soc = ((data[1] * 100) + (data[0] * 100 / 256)) / 10;
+#endif
 
 #ifdef BATTERY_LOG_MESSAGE
 	pr_debug("%s: raw capacity (%d)\n", __func__, soc);
@@ -1243,6 +1249,26 @@ static void max77843_fg_get_scaled_capacity(
 		 __func__, val->intval/10, val->intval%10);
 }
 
+#ifdef EXTENDED_BATTERY_SUPPORT
+/* capacity is integer */
+static void max77843_fg_skip_abnormal_capacity(
+		struct max77843_fuelgauge_data *fuelgauge,
+		union power_supply_propval *val)
+{
+	pr_info("%s : NOW(%d), OLD(%d)\n",
+			__func__, val->intval, fuelgauge->capacity_old);
+
+	/* keep SOC stable in abnormal status */
+	if (!fuelgauge->is_charging &&
+		fuelgauge->capacity_old > 0 &&
+		fuelgauge->capacity_old < val->intval) {
+		pr_err("%s: capacity (old %d : new %d)\n",
+			   __func__, fuelgauge->capacity_old, val->intval);
+		val->intval = fuelgauge->capacity_old;
+	}
+}
+#endif
+
 /* capacity is integer */
 static void max77843_fg_get_atomic_capacity(
 	struct max77843_fuelgauge_data *fuelgauge,
@@ -1252,12 +1278,16 @@ static void max77843_fg_get_atomic_capacity(
 	pr_info("%s : NOW(%d), OLD(%d)\n",
 		__func__, val->intval, fuelgauge->capacity_old);
 
+#ifndef EXTENDED_BATTERY_SUPPORT
 	if (fuelgauge->pdata->capacity_calculation_type &
 		SEC_FUELGAUGE_CAPACITY_TYPE_ATOMIC) {
+#endif
 	if (fuelgauge->capacity_old < val->intval)
 		val->intval = fuelgauge->capacity_old + 1;
 	else if (fuelgauge->capacity_old > val->intval)
 		val->intval = fuelgauge->capacity_old - 1;
+
+#ifndef EXTENDED_BATTERY_SUPPORT
 	}
 
 	/* keep SOC stable in abnormal status */
@@ -1273,6 +1303,7 @@ static void max77843_fg_get_atomic_capacity(
 
 	/* updated old capacity */
 	fuelgauge->capacity_old = val->intval;
+#endif	
 }
 
 static int max77843_fg_calculate_dynamic_scale(
@@ -1313,6 +1344,7 @@ static int max77843_fg_calculate_dynamic_scale(
 		fuelgauge->capacity_old = 100;
 	}
 
+#ifndef EXTENDED_BATTERY_SUPPORT
 	if (fuelgauge->capacity_max <
 		fuelgauge->pdata->capacity_max -
 		fuelgauge->pdata->capacity_max_margin) {
@@ -1322,6 +1354,7 @@ static int max77843_fg_calculate_dynamic_scale(
 		pr_debug("%s: capacity_max (%d)", __func__,
 			 fuelgauge->capacity_max);
 	}
+#endif
 
 	pr_info("%s: %d is used for capacity_max, capacity(%d)\n",
 		__func__, fuelgauge->capacity_max, capacity);
@@ -1505,7 +1538,17 @@ static int max77843_fg_get_property(struct power_supply *psy,
 					  fuelgauge->pdata->fuel_alert_soc);
 			}
 
-			/* (Only for atomic capacity)
+#ifdef EXTENDED_BATTERY_SUPPORT
+				/* skip current soc for abnormal case below.
+                 * Some voltage-based fuelgauges return bigger raw soc
+                 * than previous raw soc if voltage is changed dramatically
+                 * in discharging actually.
+                 */
+				if (fuelgauge->pdata->capacity_calculation_type &
+					SEC_FUELGAUGE_CAPACITY_TYPE_SKIP_ABNORMAL)
+					max77843_fg_skip_abnormal_capacity(fuelgauge, val);
+#endif
+														/* (Only for atomic capacity)
 			 * In initial time, capacity_old is 0.
 			 * and in resume from sleep,
 			 * capacity_old is too different from actual soc.
@@ -1520,9 +1563,18 @@ static int max77843_fg_get_property(struct power_supply *psy,
 			}
 
 			if (fuelgauge->pdata->capacity_calculation_type &
-			    (SEC_FUELGAUGE_CAPACITY_TYPE_ATOMIC |
+#ifdef EXTENDED_BATTERY_SUPPORT
+					SEC_FUELGAUGE_CAPACITY_TYPE_ATOMIC)
+#else
+			(SEC_FUELGAUGE_CAPACITY_TYPE_ATOMIC |
 			     SEC_FUELGAUGE_CAPACITY_TYPE_SKIP_ABNORMAL))
+#endif
 				max77843_fg_get_atomic_capacity(fuelgauge, val);
+
+#ifdef EXTENDED_BATTERY_SUPPORT
+				/* updated old capacity */
+				fuelgauge->capacity_old = val->intval;
+#endif
 		}
 		break;
 		/* Battery Temperature */
@@ -1536,9 +1588,11 @@ static int max77843_fg_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN:
 		break;
 #endif
+#ifndef EXTENDED_BATTERY_SUPPORT
 	case POWER_SUPPLY_PROP_ENERGY_FULL:
 		val->intval = get_fuelgauge_value(fuelgauge, FG_FULLCAP) * 100	/ fuelgauge->battery_data->Capacity;
 		break;
+#endif
 	default:
 		return -EINVAL;
 	}
@@ -1883,8 +1937,12 @@ static int __devinit max77843_fuelgauge_probe(struct platform_device *pdev)
 
 	reg_data = max77843_read_word(fuelgauge->i2c, 0xD0);
 
+#ifdef EXTENDED_BATTERY_SUPPORT
+if (reg_data >= 900 && reg_data <= 1000 && reg_data != fuelgauge->capacity_max) {
+#else	
 	if ((reg_data >= (fuelgauge->pdata->capacity_max - fuelgauge->pdata->capacity_max_margin )) &&
 	    reg_data <= 1000 && reg_data != fuelgauge->capacity_max) {
+#endif
 		pr_info("%s : Capacity Max Update (%d) -> (%d)\n",
 			__func__, fuelgauge->capacity_max, reg_data);
 		fuelgauge->capacity_max = reg_data;

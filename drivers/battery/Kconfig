@@ -227,6 +227,14 @@ config DUAL_BATTERY
 	help
 	 Say Y Support dual battery.
 
+config EXTENDED_BATTERY_SUPPORT
+	tristate "Support extended capacity battery for Note4"
+	default n
+	depends on FUELGAUGE_MAX77843
+	help
+	 Say Y Support extended battery.
+
+	 
 # Charger
 
 config CHARGER_DUMMY
